@@ -54,9 +54,8 @@ lazy val seunjeon = (project in file(".")).
   settings(commonSettings: _*).
   settings(
     name := "seunjeon",
-    version := "1.3.1",
-    crossScalaVersions := Seq("2.11.7", "2.12.0"),
-    javacOptions ++= Seq("-source", "1.7", "-target", "1.7"),
+    version := "1.4.0",
+    javacOptions ++= Seq("-source", "1.8", "-target", "1.8"),
     libraryDependencies ++= Seq(
       "org.slf4j" % "slf4j-jdk14" % "1.7.12" % Runtime,
       "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0",
@@ -76,7 +75,7 @@ lazy val elasticsearch = (project in file("elasticsearch")).dependsOn(seunjeon).
 
     scalaVersion := "2.12.0",
 
-    version := s"${esVersion}.0",
+    version := s"${esVersion}.1",
 
     javacOptions ++= Seq("-source", esJavaVersion, "-target", esJavaVersion),
 
@@ -89,7 +88,8 @@ lazy val elasticsearch = (project in file("elasticsearch")).dependsOn(seunjeon).
 //      "org.apache.lucene" % "lucene-test-framework" % "7.0.1" % Test,
 //      "org.elasticsearch.test" % "framework" % esVersion % Test,
       "junit" % "junit" % "4.12" % Test,
-      "com.novocode" % "junit-interface" % "0.11" % Test
+      "com.novocode" % "junit-interface" % "0.11" % Test,
+      "org.scalatest" %% "scalatest" % "3.0.0" % Test
     ),
 
     testOptions += Tests.Argument(TestFrameworks.JUnit, "-q", "-v"),

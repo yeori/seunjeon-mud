@@ -6,11 +6,10 @@ class ReadmeTest extends FunSuite {
   test("readme") {
     // 형태소 분석
     Analyzer.parse("아버지가방에들어가신다.").foreach(println)
-
     // 어절 분석
     Analyzer.parseEojeol("아버지가방에들어가신다.").foreach(println)
     // or
-    Analyzer.parseEojeol(Analyzer.parse("아버지가방에들어가신다.")).foreach(println)
+    Analyzer.parseEojeol(Analyzer.parseParagraph("아버지가방에들어가신다.")).foreach(println)
 
     /**
       * 사용자 사전 추가
@@ -23,13 +22,16 @@ class ReadmeTest extends FunSuite {
     Analyzer.parse("덕후냄새가 난다.").foreach(println)
 
     // 활용어 원형
-    Analyzer.parse("빨라짐").flatMap(_.deInflect()).foreach(println)
+    Analyzer.parse("빨라짐").map(_.deInflect()).foreach(println)
 
     // 복합명사 분해
     val ggilggi = Analyzer.parse("낄끼빠빠")
     ggilggi.foreach(println)  // 낄끼빠빠
-    ggilggi.flatMap(_.deCompound()).foreach(println)  // 낄끼+빠빠
+    ggilggi.map(_.deCompound()).foreach(println)  // 낄끼+빠빠
 
-    Analyzer.parse("C++").flatMap(_.deInflect()).foreach(println) // C++
+    Analyzer.parse("C++").map(_.deInflect()).foreach(println) // C++
+
+    // 압축모드 분석(heap memory 사용 최소화. 속도는 상대적으로 느림. -Xmx512m 이하 추천)
+    CompressedAnalyzer.parse("아버지가방에들어가신다").foreach(println)
   }
 }

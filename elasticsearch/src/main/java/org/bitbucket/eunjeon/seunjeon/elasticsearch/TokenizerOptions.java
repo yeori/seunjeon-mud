@@ -29,7 +29,6 @@ public class TokenizerOptions {
         this.name = name;
     }
 
-
     public TokenizerOptions setPosTagging(boolean posTagging) {
         this.posTagging = posTagging;
         return this;

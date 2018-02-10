@@ -54,7 +54,8 @@ lazy val seunjeon = (project in file(".")).
   settings(commonSettings: _*).
   settings(
     name := "seunjeon",
-    version := "1.4.0",
+    version := "1.5.0",
+    isSnapshot := true,
     javacOptions ++= Seq("-source", "1.8", "-target", "1.8"),
     libraryDependencies ++= Seq(
       "org.slf4j" % "slf4j-jdk14" % "1.7.12" % Runtime,
@@ -75,7 +76,7 @@ lazy val elasticsearch = (project in file("elasticsearch")).dependsOn(seunjeon).
 
     scalaVersion := "2.12.0",
 
-    version := s"${esVersion}.0",
+    version := s"${esVersion}.1",
 
     javacOptions ++= Seq("-source", esJavaVersion, "-target", esJavaVersion),
 
@@ -106,7 +107,6 @@ lazy val elasticsearch = (project in file("elasticsearch")).dependsOn(seunjeon).
         "classname=org.bitbucket.eunjeon.seunjeon.elasticsearch.plugin.analysis.AnalysisSeunjeonPlugin",
         s"java.version=$esJavaVersion",
         s"elasticsearch.version=$esVersion"))
-
       val jarFile = assembly.value
       // create zip file
       val zipFile = file(jarFile.getPath.substring(0, jarFile.getPath.length - jarFile.ext.length - 1) + ".zip")

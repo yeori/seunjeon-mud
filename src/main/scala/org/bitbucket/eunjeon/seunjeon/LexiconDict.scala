@@ -28,9 +28,9 @@ import scala.util.matching.Regex
 
 object LexiconDict {
   val compoundDelimiter = "+"
-  val compoundDelimiterRegex = "(?<!\\\\)" + Pattern.quote(compoundDelimiter)
+  val compoundDelimiterRegex: String = "(?<!\\\\)" + Pattern.quote(compoundDelimiter)
 
-  def buildNNGTerm(surface:String, cost:Int): Morpheme = {
+  def buildNNGTerm(surface:String, cost:Int): Morpheme= {
     val jongsung = if (isHangul(surface.last)) {
       if (hasJongsung(surface.last)) "T" else "F"
     } else "*"
@@ -40,12 +40,12 @@ object LexiconDict {
     val morphemeType = if (surfaces.length >= 2) "Compound" else "*"
 
     val feature = Array("NNG","*", jongsung, surfaces.mkString("+"), morphemeType, "*", "*", compositionFeature)
-    Morpheme(
+    BasicMorpheme(
       escapedSurfaces.mkString(""),
       NngUtil.nngLeftId,
       NngUtil.nngRightId,
       cost,
-      wrapRefArray(feature),
+      wrapRefArray(feature).mkString(","),
       MorphemeType(feature),
       wrapRefArray(Pos.poses(feature)))
   }
@@ -73,35 +73,37 @@ object LexiconDict {
 class LexiconDict {
   val logger = Logger(LoggerFactory.getLogger(classOf[LexiconDict].getName))
 
-  var termDict: Array[Morpheme] = null
-  var dictMapper: Array[Array[Int]] = null
-  var trie: DoubleArrayTrie = null
+  var termDict: Array[Morpheme] = _
 
-  def getDictionaryInfo(): String = {
+  var dictMapper: Array[Array[Int]] = _
+  var trie: DoubleArrayTrie = _
+
+
+  def getDictionaryInfo: String = {
     s"termSize = ${termDict.length} mapper size = ${dictMapper.length}"
   }
 
-  def loadFromFile(file: String): LexiconDict = {
+  def loadFromFile(file: String, compress: Boolean = false): LexiconDict = {
     val iterator = Source.fromFile(file, "utf-8").getLines()
-    loadFromIterator(iterator)
+    loadFromIterator(iterator, compress)
   }
 
-  def loadFromDir(dir: String): LexiconDict = {
+  def loadFromDir(dir: String, compress: Boolean = false): LexiconDict = {
     val r = new Regex(".+[.]csv")
     val files = new File(dir).listFiles.filter(f => r.findFirstIn(f.getName).isDefined)
     val totalIterator:Iterator[String] = files.map(f => Source.fromFile(f, "utf-8").getLines()).reduceLeft(_ ++ _)
-    loadFromIterator(totalIterator)
+    loadFromIterator(totalIterator, compress)
   }
 
-  def loadFromString(str: String): LexiconDict = {
+  def loadFromString(str: String, compress: Boolean = false): LexiconDict = {
     val iterator = str.stripMargin.split("\n").toIterator
-    loadFromIterator(iterator)
+    loadFromIterator(iterator, compress)
   }
 
   def csvParse(str: String): List[String] =
     str.split(",(?=([^\"]*\"[^\"]*\")*(?![^\"]*\"))").toList.map(_.replaceFirst("^\"", "").replaceFirst("\"$", ""))
 
-  def loadFromIterator(iterator: Iterator[String]): LexiconDict = {
+  def loadFromIterator(iterator: Iterator[String], compress: Boolean = false): LexiconDict = {
     val startTime = System.nanoTime()
     val parsedLine: Seq[Try[Morpheme]] =
       iterator.dropWhile(_.head == '#').
@@ -117,11 +119,11 @@ class LexiconDict {
               case List(surface, cost) =>
                 LexiconDict.buildNNGTerm(surface, cost.toShort)
               case List(surface, leftId, rightId, cost, feature@_ *) =>
-                Morpheme(surface,
+                BasicMorpheme(surface,
                   leftId.toShort,
                   rightId.toShort,
                   cost.toShort,
-                  wrapRefArray(feature.toArray),
+                  feature.mkString(","),
                   MorphemeType(feature),
                   wrapRefArray(Pos.poses(feature)))
             }
@@ -131,11 +133,11 @@ class LexiconDict {
     val elapsedTime = (System.nanoTime() - startTime) / (1000*1000)
     logger.info(s"csv parsing is completed. ($elapsedTime ms)")
 
-    build(morphemes.sortBy(_.surface))
+    build(morphemes.sortBy(_.getSurface), compress)
   }
 
-  private def build(sortedTerms: Seq[Morpheme]): LexiconDict = {
-    termDict = sortedTerms.toArray
+  private def build(sortedTerms: Seq[Morpheme], termDictCompress: Boolean): LexiconDict = {
+    termDict = (if (termDictCompress) sortedTerms.map(x => new CompressedMorpheme(x)) else sortedTerms).toArray
     val startTime = System.nanoTime()
     val surfaceIndexDict = buildSurfaceIndexDict(sortedTerms)
 
@@ -173,28 +175,28 @@ class LexiconDict {
     var curIndices:Array[Int] = null
     var preSurface:String = null
     sortedTerms.view.zipWithIndex.foreach { case (term:Morpheme, idx) =>
-      if (preSurface != term.surface) {
+      if (preSurface != term.getSurface) {
         if (preSurface != null) {
           groupedTerms.append((preSurface, curIndices))
         }
         curIndices = Array[Int]()
       }
       curIndices = curIndices :+ idx
-      preSurface = term.surface
+      preSurface = term.getSurface
     }
     groupedTerms.append((preSurface, curIndices))
     groupedTerms.toArray
   }
 
   def commonPrefixSearch(keyword: String): Seq[Morpheme] = {
-      trie.commonPrefixSearch(keyword).flatMap(dictMapper(_).map(termDict(_)))
+//      trie.commonPrefixSearch(keyword).flatMap(dictMapper(_).map(termDict(_).uncompressed))
+    trie.commonPrefixSearch(keyword).flatMap(dictMapper(_).map(termDict(_)))
   }
 
   def save(termDictPath: String, dictMapperPath: String, triePath: String): Unit = {
-
     val termDictStore = new ObjectOutputStream(
       new BufferedOutputStream(new FileOutputStream(termDictPath), 16*1024))
-    termDictStore.writeObject(termDict)
+    termDictStore.writeObject(termDict.map(x => new CompressedMorpheme(x)))
     termDictStore.close()
 
     val dictMapperStore = new ObjectOutputStream(
@@ -203,33 +205,38 @@ class LexiconDict {
     dictMapperStore.close()
 
     trie.write(new java.io.File(triePath))
+
   }
 
-  def load(): LexiconDict = {
-    val termDictStream = classOf[LexiconDict].getResourceAsStream(DictBuilder.TERM_DICT)
-    val dictMapperStream = classOf[LexiconDict].getResourceAsStream(DictBuilder.DICT_MAPPER)
+  def load(termDictCompress: Boolean): LexiconDict = {
+    logger.info(s"LexiconDict loading... compress mode: $termDictCompress")
+    val termDictStream = new BufferedInputStream(classOf[LexiconDict].getResourceAsStream(DictBuilder.TERM_DICT), 32*1024)
+    val dictMapperStream = new BufferedInputStream(classOf[LexiconDict].getResourceAsStream(DictBuilder.DICT_MAPPER), 32*1024)
     val trieStream = classOf[LexiconDict].getResourceAsStream(DictBuilder.TERM_TRIE)
 
-    load(termDictStream, dictMapperStream, trieStream)
+    load(termDictStream, dictMapperStream, trieStream, termDictCompress)
     this
   }
 
   def load(termDictPath: String = DictBuilder.TERM_DICT,
            dictMapperPath: String = DictBuilder.DICT_MAPPER,
-           lexiconTriePath: String = DictBuilder.TERM_TRIE): Unit = {
+           lexiconTriePath: String = DictBuilder.TERM_TRIE,
+           termDictCompress: Boolean = false): Unit = {
     val termDictStream = new FileInputStream(termDictPath)
     val dictMapperStream = new FileInputStream(dictMapperPath)
     val trieStream = new FileInputStream(lexiconTriePath)
-    load(termDictStream, dictMapperStream, trieStream)
+    load(termDictStream, dictMapperStream, trieStream, termDictCompress)
   }
 
   private def load(termDictStream: InputStream,
                    dictMapperStream: InputStream,
-                   trieStream: InputStream): Unit = {
+                   trieStream: InputStream,
+                   termDictCompress: Boolean): Unit = {
     // FIXME: 사전 로딩이 3초에서 9초로 느려짐... posid 추가하면서 느려짐..
     var startTime = System.nanoTime()
     val termDictIn = new ObjectInputStream(new BufferedInputStream(termDictStream, 16*1024))
-    termDict = termDictIn.readObject().asInstanceOf[Array[Morpheme]]
+    val compressedMorphemes = termDictIn.readObject().asInstanceOf[Array[Morpheme]]
+    termDict = if (termDictCompress) compressedMorphemes else compressedMorphemes.map(x => BasicMorpheme(x))
     termDictIn.close()
     var elapsedTime = (System.nanoTime() - startTime) / (1000*1000)
     logger.info(s"terms loading is completed. ($elapsedTime ms)")
@@ -244,5 +251,6 @@ class LexiconDict {
     startTime = System.nanoTime()
     trie = DoubleArrayTrie(trieStream)
     logger.info(s"double-array trie loading is completed. ($elapsedTime ms)")
+
   }
 }

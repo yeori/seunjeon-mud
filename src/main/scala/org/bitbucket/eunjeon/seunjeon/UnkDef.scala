@@ -13,19 +13,19 @@ object UnkDef {
         map(line2Morpheme).
         toSeq
 
-    val (default, others) = unkMorphemes.partition(_.surface == "DEFAULT")
-    (default.head, others.map(x => x.surface -> x).toMap)
+    val (default, others) = unkMorphemes.partition(_.getSurface == "DEFAULT")
+    (default.head, others.map(x => x.getSurface -> x).toMap)
   }
 
   private def line2Morpheme(str: String) = {
     val arr = str.split(",")
     val feature = arr.slice(4, arr.length)
-    Morpheme(
+    UnkMorpheme(
       arr(0),
       arr(1).toShort,
       arr(2).toShort,
       arr(3).toShort,
-      feature,
+      feature.mkString(","),
       MorphemeType(feature),
       Pos.poses(feature))
   }

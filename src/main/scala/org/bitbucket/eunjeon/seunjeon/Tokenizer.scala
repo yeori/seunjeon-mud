@@ -42,6 +42,20 @@ class Tokenizer(lexiconDict: LexiconDict, connectionCostDict: ConnectionCostDict
     else bestPath
   }
 
+  def parseText(input:String, dePreAnalysis:Boolean, userDict: LexiconDict): Iterable[Paragraph] = {
+    val text = input.intern()
+    var offset = 0
+    val lineSeparator = System.lineSeparator()
+    val bestPath: Iterable[Paragraph] = text.split(lineSeparator).toStream.map { str =>
+      val path = buildLattice(str, userDict).getBestPath(offset)
+      offset += str.length + lineSeparator.length
+      path
+    }.map(x => Paragraph(removeHeadLast(x)))
+
+    if (dePreAnalysis) bestPath.map(x => Paragraph(x.nodes.flatMap(LNode.dePreAnalysis))) // flatMap(LNode.dePreAnalysis)//.flatMap(LNode.deInflect)
+    else bestPath
+  }
+
   def parseTextJava(input:String, dePreAnalysis:Boolean): lang.Iterable[Paragraph] =
     parseText(input, dePreAnalysis).asJava
 
@@ -53,6 +67,13 @@ class Tokenizer(lexiconDict: LexiconDict, connectionCostDict: ConnectionCostDict
 //    val charsets = CharDef.splitCharSet(text)
     Lattice(text, connectionCostDict).
       addAll(getKnownTerms(text)).
+      addAll(getUnknownTerms(text)).
+      build()
+  }
+  private def buildLattice(text: String, userDict:LexiconDict): Lattice = {
+    //    val charsets = CharDef.splitCharSet(text)
+    Lattice(text, connectionCostDict).
+      addAll(getKnownTerms(text, userDict)).
       addAll(getUnknownTerms(text)).
       build()
   }
@@ -74,6 +95,14 @@ class Tokenizer(lexiconDict: LexiconDict, connectionCostDict: ConnectionCostDict
     val knownTerms = new ArrayBuffer[LNode]
     for (idx <- 0 until text.length) {
       knownTerms ++= getKnownTerms(0, idx, text.substring(idx))
+    }
+    knownTerms
+  }
+  private def getKnownTerms(text:String, userDict:LexiconDict): Seq[LNode] = {
+    // TODO: space 들어간 단어는 잘 처리하자.
+    val knownTerms = new ArrayBuffer[LNode]
+    for (idx <- 0 until text.length) {
+      knownTerms ++= getKnownTerms(0, idx, text.substring(idx), userDict)
     }
     knownTerms
   }
@@ -102,6 +131,30 @@ class Tokenizer(lexiconDict: LexiconDict, connectionCostDict: ConnectionCostDict
   private def getKnownTerms(charsetOffset: Int,
                             termOffset: Int,
                             suffixSurface: String): Seq[LNode] = {
+    /*
+    var searchedTerms = lexiconDict.commonPrefixSearch(suffixSurface)
+    if (userDict != null) {
+      searchedTerms ++= userDict.commonPrefixSearch(suffixSurface)
+    }
+    searchedTerms.map(term =>
+      LNode(term, charsetOffset + termOffset, charsetOffset + termOffset + term.getSurface.length)
+    )
+     */
+    getKnownTerms(charsetOffset, termOffset, suffixSurface, userDict)
+  }
+
+  /**
+    * suporting different dictionaries from users
+    * @param charsetOffset
+    * @param termOffset
+    * @param suffixSurface
+    * @param userDict
+    * @return
+    */
+  private def getKnownTerms(charsetOffset: Int,
+                            termOffset: Int,
+                            suffixSurface: String,
+                            userDict:LexiconDict): Seq[LNode] = {
     var searchedTerms = lexiconDict.commonPrefixSearch(suffixSurface)
     if (userDict != null) {
       searchedTerms ++= userDict.commonPrefixSearch(suffixSurface)

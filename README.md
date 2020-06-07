@@ -1,3 +1,29 @@
+# seunjeon-mud
+[seunjeon 1.5.0](https://bitbucket.org/eunjeon/seunjeon/) 프로젝트를 기반으로 multi user dictionary 지원 기능을 추가함
+
+```java
+public class Usage {
+
+    public void test_concurrent_user_dictionary() {
+        String s = "한국유아인성교육소";
+        LexiconDict userDict = new LexiconDict();
+        userDict.loadFromString(false, "유아인,-1000", "성교,-1000");
+        Iterable<LNode> nodes = CompressedAnalyzer.parseJava(s, userDict);
+        for (LNode node : nodes) {
+            System.out.println(node);
+        }
+    }
+}
+```
+
+출력
+```
+LNode(한국/WrappedArray(N),0,2,-2143)
+LNode(유아인/WrappedArray(N),2,5,-910)
+LNode(성교/WrappedArray(N),5,7,-1714)
+LNode(육소/WrappedArray(N),7,9,-2518)
+```
+
 # seunjeon
 [mecab-ko-dic](https://bitbucket.org/eunjeon/mecab-ko-dic) 기반으로 만들어진 JVM 상에서 돌아가는 한국어 형태소분석기입니다. 기본적으로 java와 scala 인터페이스를 제공합니다. 사전이 패키지 내에 포함되어 있기 때문에 별도로 [mecab-ko-dic](https://bitbucket.org/eunjeon/mecab-ko-dic)을 설치할 필요가 없습니다.
 특징으로는 (시스템 사전에 등록되어 있는 단어에 한하여) 복합명사 분해와 활용어 원형 찾기가 가능합니다. (속도도 빨라염)

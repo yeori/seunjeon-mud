@@ -6,7 +6,7 @@ lazy val commonSettings = Seq(
   scalaVersion := "2.12.0",   // default
   publishMavenStyle := true,
   publishArtifact in Test := false,
-  useGpg := true,
+  // useGpg := false,
   publishTo := {
     val nexus = "https://oss.sonatype.org/"
     if (version.value.trim.endsWith("SNAPSHOT"))
@@ -53,7 +53,7 @@ lazy val commonSettings = Seq(
 lazy val seunjeon = (project in file(".")).
   settings(commonSettings: _*).
   settings(
-    name := "seunjeon",
+    name := "seunjeon-mud",
     version := "1.5.0",
     isSnapshot := true,
     javacOptions ++= Seq("-source", "1.8", "-target", "1.8"),

@@ -27,10 +27,20 @@ trait BasicAnalyzer {
 
   def parse(sentence: String): Iterable[LNode] = parseParagraph(sentence).flatMap(_.nodes)
   def parseParagraph(sentence: String): Iterable[Paragraph] = tokenizer.parseText(sentence, dePreAnalysis=true)
+
+  /**
+    * support for concurrent user dictionary
+    * @param sentence
+    * @param userDict
+    * @return
+    */
+  def parseParagraph(sentence: String, userDict:LexiconDict): Iterable[Paragraph] = tokenizer.parseText(sentence, dePreAnalysis=false, userDict)
   def parse(sentence: String, preAnalysis: Boolean): Iterable[LNode] = parseParagraph(sentence, preAnalysis).flatMap(_.nodes)
   def parseParagraph(sentence: String, preAnalysis: Boolean): Iterable[Paragraph] = tokenizer.parseText(sentence, preAnalysis)
 
   def parseJava(sentence: String): java.lang.Iterable[LNode] = parseParagraph(sentence).flatMap(_.nodes).asJava
+  // with user dictionary
+  def parseJava(sentence: String, userDict:LexiconDict): java.lang.Iterable[LNode] = parseParagraph(sentence, userDict).flatMap(_.nodes).asJava
   def parseJavaParagraph(sentence: String): java.lang.Iterable[Paragraph] = tokenizer.parseTextJava(sentence, dePreAnalysis = true)
   def parseJava(sentence: String, preAnalysis: Boolean): java.lang.Iterable[LNode] = parseParagraph(sentence, preAnalysis).flatMap(_.nodes).asJava
   def parseJavaParagraph(sentence: String, preAnalysis: Boolean): java.lang.Iterable[Paragraph] = tokenizer.parseTextJava(sentence, preAnalysis)

@@ -21,6 +21,7 @@ import java.util.regex.Pattern
 import com.typesafe.scalalogging.Logger
 import org.slf4j.LoggerFactory
 
+import scala.annotation.varargs
 import scala.collection.mutable
 import scala.io.Source
 import scala.util.Try
@@ -97,6 +98,10 @@ class LexiconDict {
 
   def loadFromString(str: String, compress: Boolean = false): LexiconDict = {
     val iterator = str.stripMargin.split("\n").toIterator
+    loadFromIterator(iterator, compress)
+  }
+  @varargs def loadFromString(compress: Boolean, tokens: java.lang.String*): LexiconDict = {
+    val iterator = tokens.iterator // str.stripMargin.split("\n").toIterator
     loadFromIterator(iterator, compress)
   }
 
@@ -210,6 +215,9 @@ class LexiconDict {
 
   def load(termDictCompress: Boolean): LexiconDict = {
     logger.info(s"LexiconDict loading... compress mode: $termDictCompress")
+//    logger.info(s"TERM_DICT: ${DictBuilder.TERM_DICT}")
+//    logger.info(s"TERM_DICT: ${DictBuilder.DICT_MAPPER}")
+//    logger.info(s"TERM_DICT: ${DictBuilder.TERM_TRIE}")
     val termDictStream = new BufferedInputStream(classOf[LexiconDict].getResourceAsStream(DictBuilder.TERM_DICT), 32*1024)
     val dictMapperStream = new BufferedInputStream(classOf[LexiconDict].getResourceAsStream(DictBuilder.DICT_MAPPER), 32*1024)
     val trieStream = classOf[LexiconDict].getResourceAsStream(DictBuilder.TERM_TRIE)

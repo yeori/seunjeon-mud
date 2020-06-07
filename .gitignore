@@ -1,6 +1,9 @@
 .idea
 src/main/target
 mecab-ko-dic*
+mecab-ko-dic-2.0.1-20150707/
+mecab-ko-dic-2.1.1-20180720/
+mecab-ko-dic-2.0.1-20150707/matrix.def
 target
 project/project
 project/target
